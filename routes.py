@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from life_coach import LifeCoach
 from models import User
+from datetime import datetime
 import time
 import logging
 
