@@ -1,11 +1,20 @@
+#!/usr/bin/env python3
+"""
+AI Life Coach - Data Models
+
+Copyright (c) 2025 Ervin Remu Radosavlevici
+Licensed under the MIT License  
+"""
+
 import json
 import os
 from datetime import datetime, date
+import logging
 from typing import Dict, List, Any
 
 class LifeMemoryManager:
     """Manages persistent storage of user's life events, goals, and patterns"""
-    
+
     def __init__(self, user_id=None, memory_file: str = "life_memory.json"):
         self.user_id = user_id
         self.memory_file = memory_file
@@ -20,7 +29,7 @@ class LifeMemoryManager:
                 "coaching_style": "supportive"
             }
         }
-    
+
     def load_memory(self) -> Dict[str, Any]:
         """Load memory from JSON file or return default structure"""
         try:
@@ -34,9 +43,9 @@ class LifeMemoryManager:
                     return data
         except (json.JSONDecodeError, IOError) as e:
             print(f"Error loading memory file: {e}")
-        
+
         return self.default_structure.copy()
-    
+
     def save_memory(self, data: Dict[str, Any]) -> bool:
         """Save memory to JSON file"""
         try:
@@ -46,27 +55,27 @@ class LifeMemoryManager:
         except IOError as e:
             print(f"Error saving memory file: {e}")
             return False
-    
+
     def add_life_event(self, entry: str, event_type: str = "general") -> bool:
         """Add a new life event with timestamp"""
         memory = self.load_memory()
         today = date.today().isoformat()
-        
+
         event = {
             "date": today,
             "timestamp": datetime.now().isoformat(),
             "entry": entry,
             "type": event_type
         }
-        
+
         memory["life_events"].append(event)
         return self.save_memory(memory)
-    
+
     def get_recent_events(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get the most recent life events"""
         memory = self.load_memory()
         return memory["life_events"][-limit:] if memory["life_events"] else []
-    
+
     def add_goal(self, goal: str, target_date: str = None) -> bool:
         """Add a new goal"""
         memory = self.load_memory()
@@ -78,15 +87,15 @@ class LifeMemoryManager:
             "status": "active",
             "progress": 0
         }
-        
+
         memory["goals"].append(goal_entry)
         return self.save_memory(memory)
-    
+
     def get_active_goals(self) -> List[Dict[str, Any]]:
         """Get all active goals"""
         memory = self.load_memory()
         return [goal for goal in memory["goals"] if goal.get("status") == "active"]
-    
+
     def update_pattern(self, pattern_name: str, data: Any) -> bool:
         """Update or add a pattern analysis"""
         memory = self.load_memory()

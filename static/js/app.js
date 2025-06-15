@@ -1,3 +1,10 @@
+/*
+AI Life Coach - Main JavaScript Application
+
+Copyright (c) 2025 Ervin Remu Radosavlevici
+Licensed under the MIT License
+*/
+
 // AI Life Coach Frontend Application
 
 class LifeCoachApp {
@@ -949,7 +956,7 @@ function displayWeeklyReport(report) {
             </button>
             <button class="btn btn-secondary" onclick="refreshAnalytics()">
                 <i class="fas fa-sync me-1"></i>Refresh Data
-            </button>
+            Adding copyright header to the JavaScript file.            </button>
         </div>
     `;
 }

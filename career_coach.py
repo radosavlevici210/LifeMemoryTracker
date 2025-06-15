@@ -1,4 +1,12 @@
 
+#!/usr/bin/env python3
+"""
+AI Life Coach - Career Coaching Module
+
+Copyright (c) 2025 Ervin Remu Radosavlevici
+Licensed under the MIT License
+"""
+
 import os
 import json
 from datetime import date, datetime
