@@ -1,7 +1,6 @@
-from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
+from flask import render_template, request, jsonify, abort, session
 from app import app
 from life_coach import LifeCoach
-from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
 import time
 import logging
 
@@ -29,50 +28,12 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
     request_tracker[key].append(current_time)
     return True
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    """Login page"""
-    if is_authenticated():
-        return redirect(url_for('index'))
-    
-    if request.method == "POST":
-        data = request.get_json() if request.is_json else request.form
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
-        
-        if authenticate(username, password):
-            login_user(username)
-            
-            if request.is_json:
-                return jsonify({"success": True, "redirect": url_for('index')})
-            else:
-                flash('Login successful!', 'success')
-                return redirect(url_for('index'))
-        else:
-            if request.is_json:
-                return jsonify({"success": False, "error": "Invalid username or password"}), 401
-            else:
-                flash('Invalid username or password', 'error')
-    
-    return render_template("login.html")
-
-@app.route("/logout")
-@login_required
-def logout():
-    """Logout user"""
-    logout_user()
-    flash('You have been logged out successfully.', 'info')
-    return redirect(url_for('login'))
-
 @app.route("/")
-@login_required
 def index():
     """Main page route"""
-    current_user = get_current_user()
-    return render_template("index.html", current_user=current_user)
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
-@login_required
 def chat():
     """Handle chat messages"""
     try:
@@ -106,8 +67,7 @@ def chat():
             }), 400
         
         # Log chat interaction (without sensitive data)
-        current_user = get_current_user()
-        logging.info(f"Chat request from {current_user.get('username', 'unknown')} - Message length: {len(user_message)}")
+        logging.info(f"Chat request from {ip[:8]}... - Message length: {len(user_message)}")
         
         # Generate AI response
         response = life_coach.generate_response(user_message)
@@ -127,7 +87,6 @@ def chat():
         }), 500
 
 @app.route("/memory", methods=["GET"])
-@login_required
 def get_memory():
     """Get memory summary"""
     try:
@@ -142,7 +101,6 @@ def get_memory():
         return jsonify({"error": "Failed to load memory data"}), 500
 
 @app.route("/goals", methods=["POST"])
-@login_required
 def add_goal():
     """Add a new goal"""
     try:
@@ -165,8 +123,7 @@ def add_goal():
         
         success = life_coach.add_goal(goal_text, target_date)
         
-        current_user = get_current_user()
-        logging.info(f"Goal added by {current_user.get('username', 'unknown')} - Success: {success}")
+        logging.info(f"Goal added from {ip[:8]}... - Success: {success}")
         
         return jsonify({
             "success": success,
@@ -178,7 +135,6 @@ def add_goal():
         return jsonify({"success": False, "error": "Server error occurred"}), 500
 
 @app.route("/export", methods=["GET"])
-@login_required
 def export_data():
     """Export user data"""
     try:
@@ -197,8 +153,7 @@ def export_data():
             "version": "1.0"
         }
         
-        current_user = get_current_user()
-        logging.info(f"Data export requested by {current_user.get('username', 'unknown')}")
+        logging.info(f"Data export requested from {ip[:8]}...")
         
         return jsonify(export_data)
         
@@ -218,8 +173,7 @@ def health_check():
             "service": "AI Life Coach",
             "timestamp": time.time(),
             "version": "1.0.0",
-            "memory_system": "operational" if memory_accessible else "error",
-            "authentication": "enabled"
+            "memory_system": "operational" if memory_accessible else "error"
         }
         
         status_code = 200 if memory_accessible else 503
