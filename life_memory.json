@@ -1,24 +1,8 @@
 {
-  "life_events": [
-    {
-      "date": "2025-06-15",
-      "timestamp": "2025-06-15T15:08:05.708978",
-      "entry": "hello",
-      "type": "general"
-    }
-  ],
+  "life_events": [],
   "goals": [],
   "warnings": [],
-  "patterns": {
-    "mood_trend": {
-      "data": {
-        "negative_indicators": 0,
-        "positive_indicators": 0,
-        "recent_entries": 1
-      },
-      "last_updated": "2025-06-15T15:08:07.583652"
-    }
-  },
+  "patterns": {},
   "user_profile": {
     "name": "",
     "preferences": {},
