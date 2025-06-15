@@ -1,12 +1,16 @@
 from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
 from app import app
 from life_coach import LifeCoach
+from career_coach import CareerCoach
+from analytics import LifeAnalytics
 from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
 import time
 import logging
 
-# Initialize the life coach
+# Initialize coaches and analytics
 life_coach = LifeCoach()
+career_coach = CareerCoach()
+analytics = LifeAnalytics()
 
 # Request tracking for additional rate limiting
 request_tracker = {}
@@ -176,6 +180,106 @@ def add_goal():
     except Exception as e:
         logging.error(f"Goals endpoint error: {str(e)}")
         return jsonify({"success": False, "error": "Server error occurred"}), 500
+
+@app.route("/career", methods=["POST"])
+@login_required
+def career_coaching():
+    """Handle career coaching requests"""
+    try:
+        ip = request.environ.get('REMOTE_ADDR', 'unknown')
+        if not check_rate_limit(ip, 'career', limit=15, window=60):
+            return jsonify({
+                "success": False,
+                "error": "Too many career coaching requests. Please wait a moment."
+            }), 429
+        
+        data = request.get_json()
+        if not data or "message" not in data:
+            return jsonify({
+                "success": False,
+                "error": "No message provided"
+            }), 400
+        
+        user_message = data["message"].strip()
+        if not user_message:
+            return jsonify({
+                "success": False,
+                "error": "Empty message"
+            }), 400
+        
+        if len(user_message) > 2000:
+            return jsonify({
+                "success": False,
+                "error": "Message too long. Please keep it under 2000 characters."
+            }), 400
+        
+        current_user = get_current_user()
+        logging.info(f"Career coaching request from {current_user.get('username', 'unknown')}")
+        
+        # Generate career coaching response
+        response = career_coach.analyze_career_path(user_message)
+        
+        session['last_activity'] = time.time()
+        return jsonify(response)
+        
+    except Exception as e:
+        logging.error(f"Career coaching endpoint error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": "Server error occurred",
+            "response": "I'm experiencing technical difficulties with career analysis. Please try again."
+        }), 500
+
+@app.route("/career/plan", methods=["POST"])
+@login_required
+def create_career_plan():
+    """Create a structured career development plan"""
+    try:
+        ip = request.environ.get('REMOTE_ADDR', 'unknown')
+        if not check_rate_limit(ip, 'career_plan', limit=5, window=300):
+            return jsonify({"success": False, "error": "Too many plan requests"}), 429
+        
+        data = request.get_json()
+        timeframe = data.get("timeframe", "6months") if data else "6months"
+        
+        current_user = get_current_user()
+        logging.info(f"Career plan request from {current_user.get('username', 'unknown')} - Timeframe: {timeframe}")
+        
+        response = career_coach.create_career_plan(timeframe)
+        return jsonify(response)
+        
+    except Exception as e:
+        logging.error(f"Career plan endpoint error: {str(e)}")
+        return jsonify({"success": False, "error": "Failed to create career plan"}), 500
+
+@app.route("/analytics", methods=["GET"])
+@login_required
+def get_analytics():
+    """Get comprehensive analytics report"""
+    try:
+        ip = request.environ.get('REMOTE_ADDR', 'unknown')
+        if not check_rate_limit(ip, 'analytics', limit=10, window=60):
+            return jsonify({"error": "Too many analytics requests"}), 429
+        
+        report_type = request.args.get('type', 'comprehensive')
+        
+        if report_type == 'weekly':
+            report = analytics.generate_weekly_report()
+        else:
+            report = analytics.generate_comprehensive_report()
+        
+        current_user = get_current_user()
+        logging.info(f"Analytics request from {current_user.get('username', 'unknown')} - Type: {report_type}")
+        
+        return jsonify({
+            "success": True,
+            "report": report,
+            "generated_at": time.time()
+        })
+        
+    except Exception as e:
+        logging.error(f"Analytics endpoint error: {str(e)}")
+        return jsonify({"error": "Failed to generate analytics report"}), 500
 
 @app.route("/export", methods=["GET"])
 @login_required
