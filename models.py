@@ -6,7 +6,8 @@ from typing import Dict, List, Any
 class LifeMemoryManager:
     """Manages persistent storage of user's life events, goals, and patterns"""
     
-    def __init__(self, memory_file: str = "life_memory.json"):
+    def __init__(self, user_id=None, memory_file: str = "life_memory.json"):
+        self.user_id = user_id
         self.memory_file = memory_file
         self.default_structure = {
             "life_events": [],

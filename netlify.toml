@@ -1,0 +1,52 @@
+[build]
+  # Build command for Python Flask app
+  command = "pip install -r requirements.txt"
+  
+  # Publish directory (not used for server-side apps)
+  publish = "static"
+
+[build.environment]
+  # Python version for Netlify
+  PYTHON_VERSION = "3.11"
+
+# Netlify Functions configuration for Flask app
+[[functions]]
+  # This redirects all requests to the Flask app
+  function = "app"
+  
+[functions."app"]
+  # External dependencies
+  external_node_modules = []
+  
+  # Include all necessary files
+  included_files = [
+    "*.py",
+    "templates/**",
+    "static/**",
+    "life_memory.json"
+  ]
+
+# Redirect rules for single-page application behavior
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/app/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.replit.com https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com;"
+
+# Environment variables (set these in Netlify dashboard)
+# OPENAI_API_KEY = "your-openai-api-key"
+# SESSION_SECRET = "your-session-secret"
