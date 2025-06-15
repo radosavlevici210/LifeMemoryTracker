@@ -1,16 +1,14 @@
 from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
-from app import app
+from flask_login import login_user, logout_user, login_required, current_user
+from app import app, db
 from life_coach import LifeCoach
-from career_coach import CareerCoach
-from analytics import LifeAnalytics
-from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
+from models import User
+from datetime import datetime
 import time
 import logging
 
-# Initialize coaches and analytics
+# Initialize the life coach
 life_coach = LifeCoach()
-career_coach = CareerCoach()
-analytics = LifeAnalytics()
 
 # Request tracking for additional rate limiting
 request_tracker = {}
@@ -36,7 +34,7 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Login page"""
-    if is_authenticated():
+    if current_user.is_authenticated:
         return redirect(url_for('index'))
     
     if request.method == "POST":
@@ -44,8 +42,12 @@ def login():
         username = data.get('username', '').strip()
         password = data.get('password', '')
         
-        if authenticate(username, password):
-            login_user(username)
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user, remember=True)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
             
             if request.is_json:
                 return jsonify({"success": True, "redirect": url_for('index')})
@@ -72,11 +74,9 @@ def logout():
 @login_required
 def index():
     """Main page route"""
-    current_user = get_current_user()
-    return render_template("index.html", current_user=current_user)
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
-@login_required
 def chat():
     """Handle chat messages"""
     try:
@@ -110,8 +110,7 @@ def chat():
             }), 400
         
         # Log chat interaction (without sensitive data)
-        current_user = get_current_user()
-        logging.info(f"Chat request from {current_user.get('username', 'unknown')} - Message length: {len(user_message)}")
+        logging.info(f"Chat request from {ip[:8]}... - Message length: {len(user_message)}")
         
         # Generate AI response
         response = life_coach.generate_response(user_message)
@@ -131,7 +130,6 @@ def chat():
         }), 500
 
 @app.route("/memory", methods=["GET"])
-@login_required
 def get_memory():
     """Get memory summary"""
     try:
@@ -146,7 +144,6 @@ def get_memory():
         return jsonify({"error": "Failed to load memory data"}), 500
 
 @app.route("/goals", methods=["POST"])
-@login_required
 def add_goal():
     """Add a new goal"""
     try:
@@ -169,8 +166,7 @@ def add_goal():
         
         success = life_coach.add_goal(goal_text, target_date)
         
-        current_user = get_current_user()
-        logging.info(f"Goal added by {current_user.get('username', 'unknown')} - Success: {success}")
+        logging.info(f"Goal added from {ip[:8]}... - Success: {success}")
         
         return jsonify({
             "success": success,
@@ -181,108 +177,7 @@ def add_goal():
         logging.error(f"Goals endpoint error: {str(e)}")
         return jsonify({"success": False, "error": "Server error occurred"}), 500
 
-@app.route("/career", methods=["POST"])
-@login_required
-def career_coaching():
-    """Handle career coaching requests"""
-    try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'career', limit=15, window=60):
-            return jsonify({
-                "success": False,
-                "error": "Too many career coaching requests. Please wait a moment."
-            }), 429
-        
-        data = request.get_json()
-        if not data or "message" not in data:
-            return jsonify({
-                "success": False,
-                "error": "No message provided"
-            }), 400
-        
-        user_message = data["message"].strip()
-        if not user_message:
-            return jsonify({
-                "success": False,
-                "error": "Empty message"
-            }), 400
-        
-        if len(user_message) > 2000:
-            return jsonify({
-                "success": False,
-                "error": "Message too long. Please keep it under 2000 characters."
-            }), 400
-        
-        current_user = get_current_user()
-        logging.info(f"Career coaching request from {current_user.get('username', 'unknown')}")
-        
-        # Generate career coaching response
-        response = career_coach.analyze_career_path(user_message)
-        
-        session['last_activity'] = time.time()
-        return jsonify(response)
-        
-    except Exception as e:
-        logging.error(f"Career coaching endpoint error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": "Server error occurred",
-            "response": "I'm experiencing technical difficulties with career analysis. Please try again."
-        }), 500
-
-@app.route("/career/plan", methods=["POST"])
-@login_required
-def create_career_plan():
-    """Create a structured career development plan"""
-    try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'career_plan', limit=5, window=300):
-            return jsonify({"success": False, "error": "Too many plan requests"}), 429
-        
-        data = request.get_json()
-        timeframe = data.get("timeframe", "6months") if data else "6months"
-        
-        current_user = get_current_user()
-        logging.info(f"Career plan request from {current_user.get('username', 'unknown')} - Timeframe: {timeframe}")
-        
-        response = career_coach.create_career_plan(timeframe)
-        return jsonify(response)
-        
-    except Exception as e:
-        logging.error(f"Career plan endpoint error: {str(e)}")
-        return jsonify({"success": False, "error": "Failed to create career plan"}), 500
-
-@app.route("/analytics", methods=["GET"])
-@login_required
-def get_analytics():
-    """Get comprehensive analytics report"""
-    try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'analytics', limit=10, window=60):
-            return jsonify({"error": "Too many analytics requests"}), 429
-        
-        report_type = request.args.get('type', 'comprehensive')
-        
-        if report_type == 'weekly':
-            report = analytics.generate_weekly_report()
-        else:
-            report = analytics.generate_comprehensive_report()
-        
-        current_user = get_current_user()
-        logging.info(f"Analytics request from {current_user.get('username', 'unknown')} - Type: {report_type}")
-        
-        return jsonify({
-            "success": True,
-            "report": report,
-            "generated_at": time.time()
-        })
-        
-    except Exception as e:
-        logging.error(f"Analytics endpoint error: {str(e)}")
-        return jsonify({"error": "Failed to generate analytics report"}), 500
-
 @app.route("/export", methods=["GET"])
-@login_required
 def export_data():
     """Export user data"""
     try:
@@ -301,8 +196,7 @@ def export_data():
             "version": "1.0"
         }
         
-        current_user = get_current_user()
-        logging.info(f"Data export requested by {current_user.get('username', 'unknown')}")
+        logging.info(f"Data export requested from {ip[:8]}...")
         
         return jsonify(export_data)
         
@@ -322,8 +216,7 @@ def health_check():
             "service": "AI Life Coach",
             "timestamp": time.time(),
             "version": "1.0.0",
-            "memory_system": "operational" if memory_accessible else "error",
-            "authentication": "enabled"
+            "memory_system": "operational" if memory_accessible else "error"
         }
         
         status_code = 200 if memory_accessible else 503
