@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Life Assistant Chat</title>
+</head>
+<body>
+  <h2>Chat with Your Life Advisor</h2>
+  <textarea id="msg" rows="4" cols="50"></textarea><br>
+  <button onclick="send()">Send</button>
+  <div id="reply" style="white-space: pre-line; margin-top: 10px;"></div>
+
+  <script>
+    async function send() {
+      const message = document.getElementById("msg").value;
+      const res = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      document.getElementById("reply").innerText = data.response;
+    }
+  </script>
+</body>
+</html>
