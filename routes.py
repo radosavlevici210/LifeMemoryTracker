@@ -1,8 +1,7 @@
 from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required, current_user
-from app import app, db
+from app import app
 from life_coach import LifeCoach
-from models import User
+from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
 import time
 import logging
 
@@ -33,7 +32,7 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Login page"""
-    if current_user.is_authenticated:
+    if is_authenticated():
         return redirect(url_for('index'))
     
     if request.method == "POST":
@@ -41,12 +40,8 @@ def login():
         username = data.get('username', '').strip()
         password = data.get('password', '')
         
-        user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password):
-            login_user(user, remember=True)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
+        if authenticate(username, password):
+            login_user(username)
             
             if request.is_json:
                 return jsonify({"success": True, "redirect": url_for('index')})
@@ -73,9 +68,11 @@ def logout():
 @login_required
 def index():
     """Main page route"""
-    return render_template("index.html")
+    current_user = get_current_user()
+    return render_template("index.html", current_user=current_user)
 
 @app.route("/chat", methods=["POST"])
+@login_required
 def chat():
     """Handle chat messages"""
     try:
@@ -109,7 +106,8 @@ def chat():
             }), 400
         
         # Log chat interaction (without sensitive data)
-        logging.info(f"Chat request from {ip[:8]}... - Message length: {len(user_message)}")
+        current_user = get_current_user()
+        logging.info(f"Chat request from {current_user.get('username', 'unknown')} - Message length: {len(user_message)}")
         
         # Generate AI response
         response = life_coach.generate_response(user_message)
@@ -129,6 +127,7 @@ def chat():
         }), 500
 
 @app.route("/memory", methods=["GET"])
+@login_required
 def get_memory():
     """Get memory summary"""
     try:
@@ -143,6 +142,7 @@ def get_memory():
         return jsonify({"error": "Failed to load memory data"}), 500
 
 @app.route("/goals", methods=["POST"])
+@login_required
 def add_goal():
     """Add a new goal"""
     try:
@@ -165,7 +165,8 @@ def add_goal():
         
         success = life_coach.add_goal(goal_text, target_date)
         
-        logging.info(f"Goal added from {ip[:8]}... - Success: {success}")
+        current_user = get_current_user()
+        logging.info(f"Goal added by {current_user.get('username', 'unknown')} - Success: {success}")
         
         return jsonify({
             "success": success,
@@ -177,6 +178,7 @@ def add_goal():
         return jsonify({"success": False, "error": "Server error occurred"}), 500
 
 @app.route("/export", methods=["GET"])
+@login_required
 def export_data():
     """Export user data"""
     try:
@@ -195,7 +197,8 @@ def export_data():
             "version": "1.0"
         }
         
-        logging.info(f"Data export requested from {ip[:8]}...")
+        current_user = get_current_user()
+        logging.info(f"Data export requested by {current_user.get('username', 'unknown')}")
         
         return jsonify(export_data)
         
@@ -215,7 +218,8 @@ def health_check():
             "service": "AI Life Coach",
             "timestamp": time.time(),
             "version": "1.0.0",
-            "memory_system": "operational" if memory_accessible else "error"
+            "memory_system": "operational" if memory_accessible else "error",
+            "authentication": "enabled"
         }
         
         status_code = 200 if memory_accessible else 503

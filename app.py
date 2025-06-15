@@ -2,23 +2,13 @@ import os
 import logging
 from flask import Flask, request, g
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from werkzeug.middleware.proxy_fix import ProxyFix
-from sqlalchemy.orm import DeclarativeBase
 
 # Set up logging
 if os.environ.get("FLASK_ENV") == "production":
     logging.basicConfig(level=logging.INFO)
 else:
     logging.basicConfig(level=logging.DEBUG)
-
-class Base(DeclarativeBase):
-    pass
-
-# Initialize extensions
-db = SQLAlchemy(model_class=Base)
-login_manager = LoginManager()
 
 app = Flask(__name__)
 
@@ -28,20 +18,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get("FLASK_ENV") == "production"
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-# Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
-
-# Initialize extensions
-db.init_app(app)
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Please log in to access this page.'
-login_manager.login_message_category = 'info'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
 
 # Proxy fix for deployment behind reverse proxies
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -80,28 +57,6 @@ def rate_limit():
             abort(429)  # Too Many Requests
     else:
         g.rate_limits[ip] = {'count': 1, 'last_reset': current_time}
-
-# Create database tables and initialize default user
-with app.app_context():
-    # Import models to ensure tables are created
-    import models
-    db.create_all()
-    
-    # Create default user if not exists
-    from models import User
-    default_user = User.query.filter_by(username='Ervin').first()
-    if not default_user:
-        default_user = User(username='Ervin')
-        default_user.set_password('Quantum')
-        db.session.add(default_user)
-        db.session.commit()
-        logging.info("Created default user: Ervin")
-
-# User loader for Flask-Login
-@login_manager.user_loader
-def load_user(user_id):
-    from models import User
-    return User.query.get(int(user_id))
 
 # Import routes after app configuration
 import routes
