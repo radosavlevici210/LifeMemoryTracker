@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Secure Life Assistant</title>
+</head>
+<body>
+  <h2>Register First</h2>
+  <input type="text" id="email" placeholder="Your Email"><br>
+  <input type="text" id="device" placeholder="Device Info"><br>
+  <input type="text" id="bank" placeholder="Bank Account (optional)"><br>
+  <button onclick="register()">Register</button>
+
+  <h2>Chat with Assistant</h2>
+  <textarea id="msg" rows="4" cols="50"></textarea><br>
+  <button onclick="send()">Send</button>
+  <div id="reply" style="white-space: pre-line; margin-top: 20px;"></div>
+
+  <script>
+    async function register() {
+      const email = document.getElementById("email").value;
+      const device = document.getElementById("device").value;
+      const bank = document.getElementById("bank").value;
+      const res = await fetch("http://localhost:3000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, device, bank_account: bank })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+    }
+
+    async function send() {
+      const message = document.getElementById("msg").value;
+      const res = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      if (data.response) {
+        document.getElementById("reply").innerText = data.response;
+      } else {
+        alert(data.error);
+      }
+    }
+  </script>
+</body>
+</html>
