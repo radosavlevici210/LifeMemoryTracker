@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-"""
-AI Life Coach - Flask Application
 
-Copyright (c) 2025 Ervin Remu Radosavlevici
-Licensed under the MIT License
-"""
 import os
 import logging
 from flask import Flask, request, g
@@ -51,7 +45,7 @@ def rate_limit():
     ip = request.environ.get('REMOTE_ADDR')
     if not hasattr(g, 'rate_limits'):
         g.rate_limits = {}
-
+    
     # Allow 100 requests per minute per IP
     import time
     current_time = time.time()

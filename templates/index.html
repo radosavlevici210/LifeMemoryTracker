@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}AI Life Coach - Your Personal Mentor{% endblock %}
@@ -31,287 +30,196 @@
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="quick-actions p-3 border-bottom">
-                <h6 class="text-muted mb-2">Quick Actions</h6>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-sm btn-outline-primary" onclick="addQuickEntry()">
-                        <i class="fas fa-plus me-1"></i>Add Entry
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" onclick="setGoal()">
-                        <i class="fas fa-target me-1"></i>Set Goal
-                    </button>
-                    <button class="btn btn-sm btn-outline-info" onclick="exportData()">
-                        <i class="fas fa-download me-1"></i>Export Data
-                    </button>
-                </div>
-            </div>
-
-            <!-- Chat History -->
-            <div class="chat-history flex-grow-1 p-3">
-                <h6 class="text-muted mb-2">Recent Sessions</h6>
-                <div id="chatHistoryList" class="list-group list-group-flush">
-                    <!-- Chat history will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Chat Area -->
+            <!-- Main Content Area -->
         <div class="col-md-9 main-content">
-            <div class="chat-container h-100 d-flex flex-column">
-                <!-- Chat Header -->
+            <!-- Chat Interface -->
+            <div id="chatInterface">
                 <div class="chat-header p-3 border-bottom">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div id="modeIndicator">
-                            <h5 class="mb-0">
-                                <i class="fas fa-heart text-primary me-2"></i>
-                                Life Coaching Mode
-                            </h5>
-                            <small class="text-muted">Focus on personal growth and well-being</small>
-                        </div>
-                        <div class="header-actions">
-                            <button class="btn btn-outline-secondary btn-sm me-2" onclick="clearChat()">
-                                <i class="fas fa-trash me-1"></i>Clear Chat
-                            </button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="showSettings()">
-                                <i class="fas fa-cog me-1"></i>Settings
-                            </button>
-                        </div>
-                    </div>
+                    <h4 class="mb-0" id="chatTitle">Life Coaching Session</h4>
+                    <small class="text-muted">Your personalized AI coaching experience</small>
                 </div>
-
-                <!-- Messages Area -->
-                <div class="messages-container flex-grow-1 p-3 overflow-auto">
-                    <div id="chatMessages" class="chat-messages">
-                        <!-- Welcome message -->
-                        <div class="message ai-message">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <div class="message-content">
-                                <div class="message-text">
-                                    Welcome! I'm your AI Life Coach. I'm here to help you with personal development, career guidance, and life planning. How can I assist you today?
-                                </div>
-                                <div class="message-time">Just now</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input Area -->
-                <div class="input-area p-3 border-top">
-                    <form id="chatForm" class="d-flex gap-2">
-                        <div class="flex-grow-1">
-                            <textarea 
-                                id="messageInput" 
-                                class="form-control" 
-                                placeholder="Share what's on your mind..."
-                                rows="2"
-                                style="resize: none;"
-                            ></textarea>
-                        </div>
-                        <div class="d-flex flex-column gap-1">
-                            <button type="submit" class="btn btn-primary" id="sendBtn">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="voiceInput()">
-                                <i class="fas fa-microphone"></i>
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <div class="input-hints mt-2">
-                        <small class="text-muted">
-                            <i class="fas fa-lightbulb me-1"></i>
-                            Try: "Help me set a goal", "I'm feeling stressed", or "Plan my career"
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modals -->
-<!-- Quick Entry Modal -->
-<div class="modal fade" id="quickEntryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus me-2"></i>Add Quick Entry
+<div class="row">
+    <!-- Chat Interface -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-comments me-2"></i>
+                    Life Coaching Session
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()" title="Clear Chat">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="showMemory()" title="View Progress">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="quickEntryForm">
-                    <div class="mb-3">
-                        <label for="entryType" class="form-label">Entry Type</label>
-                        <select class="form-select" id="entryType" required>
-                            <option value="">Select type...</option>
-                            <option value="reflection">Daily Reflection</option>
-                            <option value="achievement">Achievement</option>
-                            <option value="challenge">Challenge/Problem</option>
-                            <option value="goal">Goal Setting</option>
-                            <option value="mood">Mood Check-in</option>
-                        </select>
+            <div class="card-body">
+                <!-- Chat Messages -->
+                <div id="chat-messages" class="chat-container mb-3">
+                    <div class="message assistant-message">
+                        <div class="message-content">
+                            <i class="fas fa-brain me-2"></i>
+                            <strong>AI Coach:</strong> Hello! I'm your personal life coach. Share what's on your mind, tell me about your day, your goals, or any challenges you're facing. I'm here to provide personalized guidance based on our conversation history.
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="entryContent" class="form-label">Content</label>
-                        <textarea class="form-control" id="entryContent" rows="4" placeholder="Describe your thoughts, feelings, or experiences..." required></textarea>
+                </div>
+
+                <!-- Input Form -->
+                <form id="chat-form" class="d-flex gap-2">
+                    <div class="flex-grow-1">
+                        <textarea 
+                            id="message-input" 
+                            class="form-control" 
+                            rows="3" 
+                            placeholder="Share what's on your mind... (e.g., 'I'm feeling overwhelmed at work' or 'I want to start exercising regularly')"
+                            required></textarea>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <button type="submit" class="btn btn-primary" id="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                            Send
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addGoal()" title="Add Goal">
+                            <i class="fas fa-target"></i>
+                        </button>
                     </div>
                 </form>
+
+                <!-- Loading indicator -->
+                <div id="loading" class="text-center mt-3" style="display: none;">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    <span>Your coach is thinking...</span>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveQuickEntry()">Save Entry</button>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="sendQuickMessage('How can I be more productive today?')">
+                        <i class="fas fa-rocket me-1"></i>
+                        Productivity Tips
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="sendQuickMessage('Help me review my goals and progress')">
+                        <i class="fas fa-target me-1"></i>
+                        Review Goals
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="sendQuickMessage('I want to reflect on my recent experiences')">
+                        <i class="fas fa-mirror me-1"></i>
+                        Life Reflection
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="sendQuickMessage('I need motivation and encouragement')">
+                        <i class="fas fa-heart me-1"></i>
+                        Motivation Boost
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Memory Overview -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-brain me-2"></i>
+                    Your Journey
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="memory-overview">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <br>Loading your progress...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Goal Setting Modal -->
+<!-- Goal Modal -->
 <div class="modal fade" id="goalModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-target me-2"></i>Set New Goal
+                    <i class="fas fa-target me-2"></i>
+                    Add New Goal
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="goalForm">
+                <form id="goal-form">
                     <div class="mb-3">
-                        <label for="goalTitle" class="form-label">Goal Title</label>
-                        <input type="text" class="form-control" id="goalTitle" placeholder="What do you want to achieve?" required>
+                        <label for="goal-text" class="form-label">Goal Description</label>
+                        <textarea class="form-control" id="goal-text" rows="3" placeholder="Describe your goal..." required></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="goalCategory" class="form-label">Category</label>
-                        <select class="form-select" id="goalCategory" required>
-                            <option value="">Select category...</option>
-                            <option value="health">Health & Fitness</option>
-                            <option value="career">Career & Professional</option>
-                            <option value="personal">Personal Development</option>
-                            <option value="relationships">Relationships</option>
-                            <option value="financial">Financial</option>
-                            <option value="education">Education & Learning</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="goalDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="goalDescription" rows="3" placeholder="Describe your goal in detail..."></textarea>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="goalDeadline" class="form-label">Target Date</label>
-                            <input type="date" class="form-control" id="goalDeadline">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="goalPriority" class="form-label">Priority</label>
-                            <select class="form-select" id="goalPriority">
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                            </select>
-                        </div>
+                        <label for="target-date" class="form-label">Target Date (Optional)</label>
+                        <input type="date" class="form-control" id="target-date">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveGoal()">Create Goal</button>
+                <button type="button" class="btn btn-primary" onclick="saveGoal()">Add Goal</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Settings Modal -->
-<div class="modal fade" id="settingsModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- Memory Modal -->
+<div class="modal fade" id="memoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-cog me-2"></i>Settings
+                    <i class="fas fa-chart-line me-2"></i>
+                    Your Progress & Insights
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">AI Response Style</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="responseStyle" id="compassionate" value="compassionate" checked>
-                        <label class="form-check-label" for="compassionate">
-                            Compassionate & Supportive
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="responseStyle" id="direct" value="direct">
-                        <label class="form-check-label" for="direct">
-                            Direct & Action-Oriented
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="responseStyle" id="analytical" value="analytical">
-                        <label class="form-check-label" for="analytical">
-                            Analytical & Detailed
-                        </label>
+                <div id="memory-details">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status"></div>
+                        <p class="mt-2">Loading your journey details...</p>
                     </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="sessionLength" class="form-label">Preferred Session Length</label>
-                    <select class="form-select" id="sessionLength">
-                        <option value="short">Short (5-10 minutes)</option>
-                        <option value="medium" selected>Medium (15-20 minutes)</option>
-                        <option value="long">Long (30+ minutes)</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
-                        <label class="form-check-label" for="enableNotifications">
-                            Enable daily check-in reminders
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="autoSave" checked>
-                        <label class="form-check-label" for="autoSave">
-                            Auto-save conversations
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
             </div>
         </div>
     </div>
 </div>
+</div>
+            </div>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="loading-overlay d-none">
-    <div class="loading-content">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <!-- Analytics Interface -->
+            <div id="analyticsInterface" style="display: none;">
+                <div class="analytics-header p-3 border-bottom">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar text-info me-2"></i>
+                        Personal Analytics Dashboard
+                    </h4>
+                    <small class="text-muted">Insights and trends from your journey</small>
+                </div>
+
+                <div class="analytics-content p-4" id="analyticsContent">
+                    <!-- Analytics content will be loaded here -->
+                </div>
+            </div>
         </div>
-        <p class="mt-3">AI is thinking...</p>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-    loadChatHistory();
-    setupEventListeners();
-});
-</script>
 {% endblock %}

@@ -1,12 +1,4 @@
 
-#!/usr/bin/env python3
-"""
-AI Life Coach - Career Coaching Module
-
-Copyright (c) 2025 Ervin Remu Radosavlevici
-Licensed under the MIT License
-"""
-
 import os
 import json
 from datetime import date, datetime
@@ -261,3 +253,128 @@ Format as actionable steps with specific timelines."""
                 "success": False,
                 "error": f"Failed to create career plan: {str(e)}"
             }
+import os
+from datetime import datetime
+from typing import Dict, Any
+try:
+    import openai
+except ImportError:
+    openai = None
+
+class CareerCoach:
+    def __init__(self):
+        if openai and os.getenv("OPENAI_API_KEY"):
+            openai.api_key = os.getenv("OPENAI_API_KEY")
+            self.openai_available = True
+        else:
+            self.openai_available = False
+    
+    def analyze_career_path(self, user_message: str) -> Dict[str, Any]:
+        """Analyze career-related query"""
+        try:
+            if self.openai_available:
+                return self._generate_career_response(user_message)
+            else:
+                return self._generate_fallback_career_response(user_message)
+        except Exception as e:
+            return {
+                "success": False,
+                "response": "I'm experiencing technical difficulties with career analysis. Please try again.",
+                "error": str(e)
+            }
+    
+    def _generate_career_response(self, user_message: str) -> Dict[str, Any]:
+        """Generate career response using OpenAI"""
+        system_prompt = """You are a professional career coach with expertise in:
+        - Career development and planning
+        - Skills assessment and gap analysis
+        - Industry trends and opportunities
+        - Professional networking strategies
+        - Interview preparation and job search
+        - Work-life balance optimization
+        
+        Provide practical, actionable career advice tailored to the user's situation."""
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=400,
+            temperature=0.7
+        )
+        
+        return {
+            "success": True,
+            "response": response.choices[0].message.content,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    def _generate_fallback_career_response(self, user_message: str) -> Dict[str, Any]:
+        """Fallback career response"""
+        message_lower = user_message.lower()
+        
+        if 'interview' in message_lower:
+            response = "For interview success: Research the company thoroughly, prepare specific examples using the STAR method, and have thoughtful questions ready about the role and company culture."
+        elif 'resume' in message_lower:
+            response = "Focus on quantifiable achievements, use action verbs, tailor your resume to each position, and keep it concise (1-2 pages). Consider using a modern, clean format."
+        elif 'networking' in message_lower:
+            response = "Build authentic relationships by offering value first, attending industry events, engaging on LinkedIn, and following up consistently. Quality connections matter more than quantity."
+        elif any(word in message_lower for word in ['skill', 'learn', 'development']):
+            response = "Identify skills gaps in your target role, use online platforms like Coursera or LinkedIn Learning, seek mentorship, and apply new skills in real projects to demonstrate competency."
+        else:
+            response = "Career development is a journey. Focus on continuous learning, building relationships, and aligning your work with your values and long-term goals. What specific area would you like to explore?"
+        
+        return {
+            "success": True,
+            "response": response,
+            "timestamp": datetime.now().isoformat(),
+            "fallback": True
+        }
+    
+    def create_career_plan(self, timeframe: str = "6months") -> Dict[str, Any]:
+        """Create a structured career development plan"""
+        plans = {
+            "3months": {
+                "title": "3-Month Career Sprint",
+                "focus": "Immediate improvements and quick wins",
+                "goals": [
+                    "Update and optimize your resume/LinkedIn profile",
+                    "Complete 1-2 relevant online courses or certifications",
+                    "Connect with 5-10 new industry professionals",
+                    "Identify and apply for 3-5 target positions"
+                ]
+            },
+            "6months": {
+                "title": "6-Month Career Development Plan",
+                "focus": "Skill building and strategic positioning",
+                "goals": [
+                    "Develop 2-3 key skills relevant to your target role",
+                    "Build a portfolio of relevant projects",
+                    "Establish regular networking routine",
+                    "Seek feedback and mentorship opportunities",
+                    "Research and target specific companies/roles"
+                ]
+            },
+            "1year": {
+                "title": "Annual Career Advancement Strategy",
+                "focus": "Long-term growth and positioning",
+                "goals": [
+                    "Complete significant skill development program",
+                    "Build thought leadership in your field",
+                    "Expand professional network significantly",
+                    "Take on stretch projects or leadership roles",
+                    "Evaluate and potentially pivot career direction"
+                ]
+            }
+        }
+        
+        plan = plans.get(timeframe, plans["6months"])
+        
+        return {
+            "success": True,
+            "plan": plan,
+            "timeframe": timeframe,
+            "created_at": datetime.now().isoformat()
+        }

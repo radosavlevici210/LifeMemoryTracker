@@ -1,12 +1,5 @@
-#!/usr/bin/env python3
-"""
-AI Life Coach - Routes Module
 
-Copyright (c) 2025 Ervin Remu Radosavlevici  
-Licensed under the MIT License
-"""
-
-from flask import render_template, request, jsonify, session, redirect, url_for, flash
+from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
 from app import app
 from life_coach import LifeCoach
 from career_coach import CareerCoach
@@ -14,6 +7,7 @@ from analytics import LifeAnalytics
 from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
 import time
 import logging
+import os
 
 # Initialize coaches and analytics
 life_coach = LifeCoach()
@@ -27,34 +21,94 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
     """Enhanced rate limiting per endpoint"""
     current_time = time.time()
     key = f"{ip}:{endpoint}"
-
+    
     if key not in request_tracker:
         request_tracker[key] = []
-
+    
     # Clean old requests
     request_tracker[key] = [req_time for req_time in request_tracker[key] 
                            if current_time - req_time < window]
-
+    
     if len(request_tracker[key]) >= limit:
         return False
-
+    
     request_tracker[key].append(current_time)
     return True
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """User registration"""
+    if is_authenticated():
+        return redirect(url_for('index'))
+    
+    if request.method == "POST":
+        data = request.get_json() if request.is_json else request.form
+        email = data.get('email', '').strip()
+        device = data.get('device', 'unknown')
+        
+        if not email:
+            if request.is_json:
+                return jsonify({"error": "Email is required"}), 400
+            else:
+                flash('Email is required', 'error')
+                return render_template("register.html")
+        
+        # Simple registration - in production, add proper validation
+        users_file = "users.json"
+        users = []
+        if os.path.exists(users_file):
+            try:
+                with open(users_file, 'r') as f:
+                    users = json.load(f)
+            except:
+                users = []
+        
+        # Check if user already exists
+        if any(user.get('email') == email for user in users):
+            if request.is_json:
+                return jsonify({"error": "Email already registered"}), 400
+            else:
+                flash('Email already registered. Please login.', 'error')
+                return redirect(url_for('login'))
+        
+        # Add new user
+        import datetime
+        import json
+        users.append({
+            "email": email,
+            "device": device,
+            "ip": request.environ.get('REMOTE_ADDR', 'unknown'),
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        
+        with open(users_file, 'w') as f:
+            json.dump(users, f, indent=2)
+        
+        # Auto-login after registration
+        login_user(email.split('@')[0])  # Use email prefix as username
+        
+        if request.is_json:
+            return jsonify({"message": "Registered and logged in successfully"})
+        else:
+            flash('Registration successful!', 'success')
+            return redirect(url_for('index'))
+    
+    return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Login page"""
     if is_authenticated():
         return redirect(url_for('index'))
-
+    
     if request.method == "POST":
         data = request.get_json() if request.is_json else request.form
         username = data.get('username', '').strip()
         password = data.get('password', '')
-
+        
         if authenticate(username, password):
             login_user(username)
-
+            
             if request.is_json:
                 return jsonify({"success": True, "redirect": url_for('index')})
             else:
@@ -65,7 +119,7 @@ def login():
                 return jsonify({"success": False, "error": "Invalid username or password"}), 401
             else:
                 flash('Invalid username or password', 'error')
-
+    
     return render_template("login.html")
 
 @app.route("/logout")
@@ -95,41 +149,41 @@ def chat():
                 "success": False,
                 "error": "Too many chat requests. Please wait a moment."
             }), 429
-
+        
         data = request.get_json()
         if not data or "message" not in data:
             return jsonify({
                 "success": False,
                 "error": "No message provided"
             }), 400
-
+        
         user_message = data["message"].strip()
         if not user_message:
             return jsonify({
                 "success": False,
                 "error": "Empty message"
             }), 400
-
+        
         # Input validation and sanitization
         if len(user_message) > 2000:
             return jsonify({
                 "success": False,
                 "error": "Message too long. Please keep it under 2000 characters."
             }), 400
-
+        
         # Log chat interaction (without sensitive data)
         current_user = get_current_user()
         logging.info(f"Chat request from {current_user.get('username', 'unknown')} - Message length: {len(user_message)}")
-
+        
         # Generate AI response
         response = life_coach.generate_response(user_message)
-
+        
         # Track session activity
         session['last_activity'] = time.time()
         session.permanent = True
-
+        
         return jsonify(response)
-
+        
     except Exception as e:
         logging.error(f"Chat endpoint error: {str(e)}")
         return jsonify({
@@ -146,7 +200,7 @@ def get_memory():
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
         if not check_rate_limit(ip, 'memory', limit=30, window=60):
             return jsonify({"error": "Too many requests"}), 429
-
+        
         summary = life_coach.get_memory_summary()
         return jsonify(summary)
     except Exception as e:
@@ -161,30 +215,30 @@ def add_goal():
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
         if not check_rate_limit(ip, 'goals', limit=10, window=60):
             return jsonify({"success": False, "error": "Too many requests"}), 429
-
+        
         data = request.get_json()
         if not data or "goal" not in data:
             return jsonify({"success": False, "error": "No goal provided"}), 400
-
+        
         goal_text = data["goal"].strip()
         target_date = data.get("target_date")
-
+        
         if not goal_text:
             return jsonify({"success": False, "error": "Empty goal"}), 400
-
+        
         if len(goal_text) > 500:
             return jsonify({"success": False, "error": "Goal too long. Please keep it under 500 characters."}), 400
-
+        
         success = life_coach.add_goal(goal_text, target_date)
-
+        
         current_user = get_current_user()
         logging.info(f"Goal added by {current_user.get('username', 'unknown')} - Success: {success}")
-
+        
         return jsonify({
             "success": success,
             "message": "Goal added successfully" if success else "Failed to add goal"
         })
-
+        
     except Exception as e:
         logging.error(f"Goals endpoint error: {str(e)}")
         return jsonify({"success": False, "error": "Server error occurred"}), 500
@@ -200,36 +254,36 @@ def career_coaching():
                 "success": False,
                 "error": "Too many career coaching requests. Please wait a moment."
             }), 429
-
+        
         data = request.get_json()
         if not data or "message" not in data:
             return jsonify({
                 "success": False,
                 "error": "No message provided"
             }), 400
-
+        
         user_message = data["message"].strip()
         if not user_message:
             return jsonify({
                 "success": False,
                 "error": "Empty message"
             }), 400
-
+        
         if len(user_message) > 2000:
             return jsonify({
                 "success": False,
                 "error": "Message too long. Please keep it under 2000 characters."
             }), 400
-
+        
         current_user = get_current_user()
         logging.info(f"Career coaching request from {current_user.get('username', 'unknown')}")
-
+        
         # Generate career coaching response
         response = career_coach.analyze_career_path(user_message)
-
+        
         session['last_activity'] = time.time()
         return jsonify(response)
-
+        
     except Exception as e:
         logging.error(f"Career coaching endpoint error: {str(e)}")
         return jsonify({
@@ -246,16 +300,16 @@ def create_career_plan():
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
         if not check_rate_limit(ip, 'career_plan', limit=5, window=300):
             return jsonify({"success": False, "error": "Too many plan requests"}), 429
-
+        
         data = request.get_json()
         timeframe = data.get("timeframe", "6months") if data else "6months"
-
+        
         current_user = get_current_user()
         logging.info(f"Career plan request from {current_user.get('username', 'unknown')} - Timeframe: {timeframe}")
-
+        
         response = career_coach.create_career_plan(timeframe)
         return jsonify(response)
-
+        
     except Exception as e:
         logging.error(f"Career plan endpoint error: {str(e)}")
         return jsonify({"success": False, "error": "Failed to create career plan"}), 500
@@ -268,23 +322,23 @@ def get_analytics():
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
         if not check_rate_limit(ip, 'analytics', limit=10, window=60):
             return jsonify({"error": "Too many analytics requests"}), 429
-
+        
         report_type = request.args.get('type', 'comprehensive')
-
+        
         if report_type == 'weekly':
             report = analytics.generate_weekly_report()
         else:
             report = analytics.generate_comprehensive_report()
-
+        
         current_user = get_current_user()
         logging.info(f"Analytics request from {current_user.get('username', 'unknown')} - Type: {report_type}")
-
+        
         return jsonify({
             "success": True,
             "report": report,
             "generated_at": time.time()
         })
-
+        
     except Exception as e:
         logging.error(f"Analytics endpoint error: {str(e)}")
         return jsonify({"error": "Failed to generate analytics report"}), 500
@@ -297,9 +351,9 @@ def export_data():
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
         if not check_rate_limit(ip, 'export', limit=5, window=300):  # 5 exports per 5 minutes
             return jsonify({"error": "Too many export requests"}), 429
-
+        
         memory_data = life_coach.memory_manager.load_memory()
-
+        
         # Remove any sensitive internal data
         export_data = {
             "life_events": memory_data.get("life_events", []),
@@ -308,12 +362,12 @@ def export_data():
             "export_timestamp": time.time(),
             "version": "1.0"
         }
-
+        
         current_user = get_current_user()
         logging.info(f"Data export requested by {current_user.get('username', 'unknown')}")
-
+        
         return jsonify(export_data)
-
+        
     except Exception as e:
         logging.error(f"Export endpoint error: {str(e)}")
         return jsonify({"error": "Failed to export data"}), 500
@@ -324,7 +378,7 @@ def health_check():
     try:
         # Basic health checks
         memory_accessible = life_coach.memory_manager.load_memory() is not None
-
+        
         health_status = {
             "status": "healthy" if memory_accessible else "degraded",
             "service": "AI Life Coach",
@@ -333,10 +387,10 @@ def health_check():
             "memory_system": "operational" if memory_accessible else "error",
             "authentication": "enabled"
         }
-
+        
         status_code = 200 if memory_accessible else 503
         return jsonify(health_status), status_code
-
+        
     except Exception as e:
         logging.error(f"Health check error: {str(e)}")
         return jsonify({
