@@ -1,6 +1,8 @@
-from flask import render_template, request, jsonify, abort, session
-from app import app
+from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from app import app, db
 from life_coach import LifeCoach
+from models import User
 import time
 import logging
 
@@ -28,7 +30,47 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
     request_tracker[key].append(current_time)
     return True
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == "POST":
+        data = request.get_json() if request.is_json else request.form
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user, remember=True)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            if request.is_json:
+                return jsonify({"success": True, "redirect": url_for('index')})
+            else:
+                flash('Login successful!', 'success')
+                return redirect(url_for('index'))
+        else:
+            if request.is_json:
+                return jsonify({"success": False, "error": "Invalid username or password"}), 401
+            else:
+                flash('Invalid username or password', 'error')
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    """Logout user"""
+    logout_user()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('login'))
+
 @app.route("/")
+@login_required
 def index():
     """Main page route"""
     return render_template("index.html")

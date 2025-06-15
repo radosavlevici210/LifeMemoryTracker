@@ -39,7 +39,7 @@ class UserLifeData(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data_type = db.Column(db.String(50), nullable=False)  # 'event', 'goal', 'pattern', 'warning'
     content = db.Column(db.Text, nullable=False)
-    metadata = db.Column(db.JSON)
+    extra_data = db.Column(db.JSON)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
