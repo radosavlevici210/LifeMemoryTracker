@@ -1,3 +1,4 @@
+
 from flask import render_template, request, jsonify, abort, session, redirect, url_for, flash
 from app import app
 from life_coach import LifeCoach
@@ -6,6 +7,7 @@ from analytics import LifeAnalytics
 from auth import login_required, authenticate, login_user, logout_user, is_authenticated, get_current_user
 import time
 import logging
+import os
 
 # Initialize coaches and analytics
 life_coach = LifeCoach()
@@ -15,8 +17,8 @@ analytics = LifeAnalytics()
 # Request tracking for additional rate limiting
 request_tracker = {}
 
-def check_rate_limit(ip, endpoint, limit=10, window=60):
-    """Enhanced rate limiting per endpoint"""
+def check_rate_limit(ip, endpoint, limit=50, window=60):
+    """Enhanced rate limiting per endpoint for production"""
     current_time = time.time()
     key = f"{ip}:{endpoint}"
     
@@ -32,6 +34,66 @@ def check_rate_limit(ip, endpoint, limit=10, window=60):
     
     request_tracker[key].append(current_time)
     return True
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """User registration"""
+    if is_authenticated():
+        return redirect(url_for('index'))
+    
+    if request.method == "POST":
+        data = request.get_json() if request.is_json else request.form
+        email = data.get('email', '').strip()
+        device = data.get('device', 'unknown')
+        
+        if not email:
+            if request.is_json:
+                return jsonify({"error": "Email is required"}), 400
+            else:
+                flash('Email is required', 'error')
+                return render_template("register.html")
+        
+        # Simple registration - in production, add proper validation
+        users_file = "users.json"
+        users = []
+        if os.path.exists(users_file):
+            try:
+                with open(users_file, 'r') as f:
+                    users = json.load(f)
+            except:
+                users = []
+        
+        # Check if user already exists
+        if any(user.get('email') == email for user in users):
+            if request.is_json:
+                return jsonify({"error": "Email already registered"}), 400
+            else:
+                flash('Email already registered. Please login.', 'error')
+                return redirect(url_for('login'))
+        
+        # Add new user
+        import datetime
+        import json
+        users.append({
+            "email": email,
+            "device": device,
+            "ip": request.environ.get('REMOTE_ADDR', 'unknown'),
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        
+        with open(users_file, 'w') as f:
+            json.dump(users, f, indent=2)
+        
+        # Auto-login after registration
+        login_user(email.split('@')[0])  # Use email prefix as username
+        
+        if request.is_json:
+            return jsonify({"message": "Registered and logged in successfully"})
+        else:
+            flash('Registration successful!', 'success')
+            return redirect(url_for('index'))
+    
+    return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -82,7 +144,7 @@ def chat():
     try:
         # Enhanced rate limiting for chat endpoint
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'chat', limit=20, window=60):
+        if not check_rate_limit(ip, 'chat', limit=100, window=60):
             return jsonify({
                 "success": False,
                 "error": "Too many chat requests. Please wait a moment."
@@ -187,7 +249,7 @@ def career_coaching():
     """Handle career coaching requests"""
     try:
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'career', limit=15, window=60):
+        if not check_rate_limit(ip, 'career', limit=75, window=60):
             return jsonify({
                 "success": False,
                 "error": "Too many career coaching requests. Please wait a moment."
@@ -258,7 +320,7 @@ def get_analytics():
     """Get comprehensive analytics report"""
     try:
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'analytics', limit=10, window=60):
+        if not check_rate_limit(ip, 'analytics', limit=50, window=60):
             return jsonify({"error": "Too many analytics requests"}), 429
         
         report_type = request.args.get('type', 'comprehensive')

@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+AI Life Coach - Authentication Module
+
+Copyright (c) 2025 Ervin Remu Radosavlevici
+Licensed under the MIT License
+"""
+
 import os
 import hashlib
 import secrets
