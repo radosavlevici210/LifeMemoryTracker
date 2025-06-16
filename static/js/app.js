@@ -1,43 +1,44 @@
-// AI Life Coach - Simplified Frontend
-// Copyright (c) 2025 Ervin Remus Radosavlevici
+
+/*!
+ * AI Life Coach - Production Frontend
+ * Copyright (c) 2025 Ervin Remus Radosavlevici
+ * Licensed under the MIT License
+ */
 
 class LifeCoachApp {
     constructor() {
-        this.currentUser = null;
-        this.isLoggedIn = false;
+        this.currentMode = 'life'; // 'life' or 'career'
         this.init();
     }
 
     init() {
-        console.log('AI Life Coach application initialized successfully');
-        console.log('Page load time:', Date.now() + 'ms');
-
+        console.log('AI Life Coach initialized');
         this.setupEventListeners();
-        this.checkAuthStatus();
-        this.loadMemory();
+        this.loadInitialData();
     }
 
     setupEventListeners() {
-        // Chat form
-        const chatForm = document.getElementById('chatForm');
-        if (chatForm) {
-            chatForm.addEventListener('submit', (e) => this.handleChatSubmit(e));
-        }
-
-        // Send button
-        const sendBtn = document.getElementById('sendBtn');
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => this.sendMessage());
-        }
-
-        // Enter key in message input
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.addEventListener('keypress', (e) => {
+        // Chat functionality
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        if (chatInput && sendButton) {
+            chatInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.sendMessage();
                 }
+            });
+            
+            sendButton.addEventListener('click', () => this.sendMessage());
+        }
+
+        // Mode toggle
+        const modeToggle = document.getElementById('modeToggle');
+        if (modeToggle) {
+            modeToggle.addEventListener('change', (e) => {
+                this.currentMode = e.target.checked ? 'career' : 'life';
+                this.updateModeDisplay();
             });
         }
 
@@ -47,89 +48,84 @@ class LifeCoachApp {
             goalForm.addEventListener('submit', (e) => this.handleGoalSubmit(e));
         }
 
-        // Simple buttons
+        // Quick actions
+        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+        quickActionBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.currentTarget.dataset.action;
+                this.handleQuickAction(action);
+            });
+        });
+
+        // Analytics refresh
+        const refreshAnalytics = document.getElementById('refreshAnalytics');
+        if (refreshAnalytics) {
+            refreshAnalytics.addEventListener('click', () => this.loadAnalytics());
+        }
+
+        // Export and clear
         const exportBtn = document.getElementById('exportBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
         if (exportBtn) {
             exportBtn.addEventListener('click', () => this.exportData());
         }
-
-        const clearBtn = document.getElementById('clearBtn');
+        
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.clearData());
         }
     }
 
-    checkAuthStatus() {
-        fetch('/health')
-            .then(response => response.json())
-            .then(data => {
-                console.log('System status:', data.status);
-                this.isLoggedIn = true;
-            })
-            .catch(error => {
-                console.log('System check failed:', error);
-            });
-    }
-
     async sendMessage() {
-        const messageInput = document.getElementById('messageInput');
-        const message = messageInput.value.trim();
+        const chatInput = document.getElementById('chatInput');
+        const message = chatInput.value.trim();
 
         if (!message) return;
 
-        this.addMessageToChat('user', message);
-        messageInput.value = '';
-
+        this.addMessage('user', message);
+        chatInput.value = '';
         this.showTyping(true);
 
         try {
-            const response = await fetch('/chat', {
+            const endpoint = this.currentMode === 'career' ? '/career' : '/chat';
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                this.addMessageToChat('assistant', data.response);
+                this.addMessage('ai', data.response);
             } else {
-                this.addMessageToChat('assistant', data.error || 'Sorry, something went wrong.');
+                this.addMessage('ai', data.error || 'Sorry, something went wrong.');
             }
         } catch (error) {
             console.error('Chat error:', error);
-            this.addMessageToChat('assistant', 'Connection error. Please try again.');
+            this.addMessage('ai', 'Connection error. Please try again.');
         } finally {
             this.showTyping(false);
         }
     }
 
-    handleChatSubmit(e) {
-        e.preventDefault();
-        this.sendMessage();
-    }
-
-    addMessageToChat(role, content) {
+    addMessage(sender, content) {
         const chatMessages = document.getElementById('chatMessages');
         if (!chatMessages) return;
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role}-message mb-3`;
+        messageDiv.className = `message ${sender}-message`;
 
-        const avatar = role === 'user' ? '👤' : '🤖';
-        const roleText = role === 'user' ? 'You' : 'AI Coach';
+        const avatar = sender === 'user' ? '👤' : (this.currentMode === 'career' ? '💼' : '🧠');
+        const senderName = sender === 'user' ? 'You' : (this.currentMode === 'career' ? 'Career Coach' : 'Life Coach');
 
         messageDiv.innerHTML = `
-            <div class="d-flex ${role === 'user' ? 'justify-content-end' : ''}">
-                <div class="message-content ${role === 'user' ? 'bg-primary text-white' : 'bg-secondary'} p-3 rounded-3" style="max-width: 80%;">
-                    <div class="message-header mb-2">
-                        <small class="text-muted">${avatar} ${roleText}</small>
-                    </div>
-                    <div class="message-text">${this.formatMessage(content)}</div>
-                </div>
+            <div class="message-header">
+                <span class="message-avatar">${avatar}</span>
+                <span class="message-sender">${senderName}</span>
+                <span class="message-time">${new Date().toLocaleTimeString()}</span>
             </div>
+            <div class="message-content">${this.formatMessage(content)}</div>
         `;
 
         chatMessages.appendChild(messageDiv);
@@ -141,9 +137,45 @@ class LifeCoachApp {
     }
 
     showTyping(show) {
-        const typingIndicator = document.getElementById('typingIndicator');
-        if (typingIndicator) {
-            typingIndicator.style.display = show ? 'block' : 'none';
+        // Add typing indicator if needed
+        const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+
+        const existingTyping = chatMessages.querySelector('.typing-indicator');
+        if (existingTyping) {
+            existingTyping.remove();
+        }
+
+        if (show) {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message ai-message typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-avatar">${this.currentMode === 'career' ? '💼' : '🧠'}</span>
+                    <span class="message-sender">${this.currentMode === 'career' ? 'Career Coach' : 'Life Coach'}</span>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+
+    updateModeDisplay() {
+        const modeLabel = document.getElementById('modeLabel');
+        if (modeLabel) {
+            modeLabel.textContent = this.currentMode === 'career' ? 'Career Coach' : 'Life Coach';
+        }
+
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.placeholder = this.currentMode === 'career' 
+                ? 'Ask about career development, skills, job search...'
+                : 'Share what\'s on your mind, your goals, or ask for life advice...';
         }
     }
 
@@ -151,89 +183,114 @@ class LifeCoachApp {
         e.preventDefault();
 
         const goalInput = document.getElementById('goalInput');
+        const targetDate = document.getElementById('targetDate');
+        
         const goal = goalInput.value.trim();
-
         if (!goal) return;
 
         try {
             const response = await fetch('/goals', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ goal })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    goal, 
+                    target_date: targetDate ? targetDate.value : null 
+                })
             });
 
             const data = await response.json();
 
             if (data.success) {
                 goalInput.value = '';
-                this.showAlert('Goal added successfully!', 'success');
-                this.loadMemory();
+                if (targetDate) targetDate.value = '';
+                this.showNotification('Goal added successfully!', 'success');
+                this.loadMemoryOverview();
             } else {
-                this.showAlert(data.error || 'Failed to add goal', 'danger');
+                this.showNotification(data.error || 'Failed to add goal', 'error');
             }
         } catch (error) {
             console.error('Goal error:', error);
-            this.showAlert('Connection error. Please try again.', 'danger');
+            this.showNotification('Connection error. Please try again.', 'error');
         }
     }
 
-    async loadMemory() {
+    handleQuickAction(action) {
+        const prompts = {
+            'daily-reflection': 'Help me reflect on my day. What went well and what could I improve?',
+            'goal-check': 'Let\'s check on my current goals. How am I progressing?',
+            'mood-check': 'I\'d like to share how I\'m feeling today and get some guidance.',
+            'challenge': 'I\'m facing a challenge and could use some advice and perspective.',
+            'achievement': 'I\'ve accomplished something and want to share this success.',
+            'career-plan': 'Help me create a career development plan for the next few months.'
+        };
+
+        const prompt = prompts[action];
+        if (prompt) {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.value = prompt;
+                chatInput.focus();
+            }
+        }
+    }
+
+    async loadInitialData() {
+        this.loadMemoryOverview();
+        this.loadAnalytics();
+    }
+
+    async loadMemoryOverview() {
+        const memoryOverview = document.getElementById('memoryOverview');
+        if (!memoryOverview) return;
+
         try {
             const response = await fetch('/memory');
             const data = await response.json();
 
-            this.updateGoalsList(data.goals || []);
-            this.updateStats(data);
+            memoryOverview.innerHTML = `
+                <div class="memory-stats">
+                    <div class="stat-item">
+                        <strong>${data.goals?.length || 0}</strong>
+                        <small>Goals</small>
+                    </div>
+                    <div class="stat-item">
+                        <strong>${data.life_events?.length || 0}</strong>
+                        <small>Life Events</small>
+                    </div>
+                    <div class="stat-item">
+                        <strong>${data.conversation_count || 0}</strong>
+                        <small>Conversations</small>
+                    </div>
+                </div>
+            `;
         } catch (error) {
-            console.error('Memory load error:', error);
+            console.error('Memory loading error:', error);
+            memoryOverview.innerHTML = '<div class="text-muted">Unable to load memory data</div>';
         }
     }
 
-    updateGoalsList(goals) {
-        const goalsList = document.getElementById('goalsList');
-        if (!goalsList) return;
+    async loadAnalytics() {
+        const analyticsContainer = document.getElementById('analyticsContainer');
+        if (!analyticsContainer) return;
 
-        if (goals.length === 0) {
-            goalsList.innerHTML = '<p class="text-muted">No goals yet. Add your first goal above!</p>';
-            return;
+        try {
+            const response = await fetch('/analytics');
+            const data = await response.json();
+
+            if (data.success && data.report) {
+                analyticsContainer.innerHTML = `
+                    <div class="analytics-summary">
+                        <h6>Recent Activity</h6>
+                        <p class="text-muted">${data.report.summary || 'No recent activity'}</p>
+                    </div>
+                `;
+            } else {
+                analyticsContainer.innerHTML = '<div class="text-muted">No analytics available</div>';
+            }
+        } catch (error) {
+            console.error('Analytics loading error:', error);
+            analyticsContainer.innerHTML = '<div class="text-muted">Unable to load analytics</div>';
         }
-
-        goalsList.innerHTML = goals.map(goal => `
-            <div class="goal-item p-3 mb-2 bg-secondary rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${goal.goal}</h6>
-                        <small class="text-muted">Created: ${goal.created_date}</small>
-                    </div>
-                    <span class="badge bg-primary">${goal.status}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    updateStats(data) {
-        const statsContainer = document.getElementById('statsContainer');
-        if (!statsContainer) return;
-
-        const stats = {
-            'Total Goals': data.goals?.length || 0,
-            'Active Goals': data.goals?.filter(g => g.status === 'active').length || 0,
-            'Life Events': data.life_events?.length || 0,
-            'Conversations': data.conversation_count || 0
-        };
-
-        statsContainer.innerHTML = Object.entries(stats).map(([key, value]) => `
-            <div class="col-md-3">
-                <div class="card bg-secondary">
-                    <div class="card-body text-center">
-                        <h3 class="card-title">${value}</h3>
-                        <p class="card-text">${key}</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
     }
 
     async exportData() {
@@ -246,47 +303,67 @@ class LifeCoachApp {
 
             const a = document.createElement('a');
             a.href = url;
-            a.download = `life_coach_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `ai_life_coach_export_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
-            this.showAlert('Data exported successfully!', 'success');
+            this.showNotification('Data exported successfully!', 'success');
         } catch (error) {
             console.error('Export error:', error);
-            this.showAlert('Export failed. Please try again.', 'danger');
+            this.showNotification('Export failed. Please try again.', 'error');
         }
     }
 
     clearData() {
-        if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+        if (confirm('Are you sure you want to clear all local data? This cannot be undone.')) {
             localStorage.clear();
-            this.showAlert('Local data cleared!', 'info');
-            location.reload();
+            sessionStorage.clear();
+            this.showNotification('Local data cleared!', 'info');
+            setTimeout(() => location.reload(), 1000);
         }
     }
 
-    showAlert(message, type = 'info') {
-        const alertContainer = document.getElementById('alertContainer') || document.body;
-
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        alert.innerHTML = `
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        notification.innerHTML = `
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
 
-        alertContainer.appendChild(alert);
+        document.body.appendChild(notification);
 
         setTimeout(() => {
-            if (alert.parentNode) {
-                alert.remove();
+            if (notification.parentNode) {
+                notification.remove();
             }
         }, 5000);
     }
 }
 
-// Initialize app when page loads
+// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     window.lifeCoachApp = new LifeCoachApp();
 });
+
+// Global functions for compatibility
+function loadMemoryOverview() {
+    if (window.lifeCoachApp) {
+        window.lifeCoachApp.loadMemoryOverview();
+    }
+}
+
+function exportUserData() {
+    if (window.lifeCoachApp) {
+        window.lifeCoachApp.exportData();
+    }
+}
+
+function createCareerPlan() {
+    if (window.lifeCoachApp) {
+        window.lifeCoachApp.handleQuickAction('career-plan');
+    }
+}
