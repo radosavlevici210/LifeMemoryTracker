@@ -1,4 +1,3 @@
-
 /*!
  * AI Life Coach - Stylesheet
  * Copyright (c) 2025 Ervin Remu Radosavlevici
@@ -632,37 +631,37 @@ body {
     .main-content {
         padding: 1rem 0;
     }
-    
+
     .chat-container {
         height: 60vh;
     }
-    
+
     .quick-actions {
         grid-template-columns: 1fr;
     }
-    
+
     .analytics-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .memory-stats {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .goal-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .navbar-brand {
         font-size: 1.1rem;
     }
-    
+
     .card-body {
         padding: 1rem;
     }
-    
+
     .chat-input-container {
         padding: 0.75rem;
     }
@@ -672,29 +671,29 @@ body {
     .memory-stats {
         grid-template-columns: 1fr;
     }
-    
+
     .stat-item {
         padding: 0.75rem;
     }
-    
+
     .stat-number {
         font-size: 1.5rem;
     }
-    
+
     .chat-messages {
         padding: 0.75rem;
     }
-    
+
     .message-content {
         padding: 0.75rem;
     }
-    
+
     .notification {
         right: 10px;
         left: 10px;
         transform: translateY(-100%);
     }
-    
+
     .notification.show {
         transform: translateY(0);
     }
@@ -708,13 +707,13 @@ body {
     .btn {
         display: none !important;
     }
-    
+
     .chat-container {
         height: auto;
         box-shadow: none;
         border: 1px solid #000;
     }
-    
+
     .message-content {
         border: 1px solid #000;
         margin-bottom: 1rem;
@@ -727,11 +726,11 @@ body {
         --border-color: #000;
         --text-muted: #333;
     }
-    
+
     .card {
         border: 2px solid var(--border-color);
     }
-    
+
     .btn {
         border: 2px solid currentColor;
     }
@@ -765,4 +764,45 @@ body {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+}
+
+.footer {
+    margin-top: auto;
+    padding: 2rem 0;
+    border-top: 1px solid #dee2e6;
+}
+
+.career-plan-container {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid #28a745;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+
+.career-plan-container h4 {
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
+.goals-section, .milestones-section, .skills-section {
+    margin: 1rem 0;
+}
+
+.goals-section h5, .milestones-section h5, .skills-section h5 {
+    color: #20c997;
+    margin-bottom: 0.5rem;
+}
+
+.goals-section ul, .milestones-section ul, .skills-section ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.goals-section li, .milestones-section li, .skills-section li {
+    background: rgba(32, 201, 151, 0.1);
+    border-left: 3px solid #20c997;
+    padding: 0.5rem 1rem;
+    margin: 0.5rem 0;
+    border-radius: 0.25rem;
 }

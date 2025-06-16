@@ -17,8 +17,8 @@ analytics = LifeAnalytics()
 # Request tracking for additional rate limiting
 request_tracker = {}
 
-def check_rate_limit(ip, endpoint, limit=10, window=60):
-    """Enhanced rate limiting per endpoint"""
+def check_rate_limit(ip, endpoint, limit=50, window=60):
+    """Enhanced rate limiting per endpoint for production"""
     current_time = time.time()
     key = f"{ip}:{endpoint}"
     
@@ -144,7 +144,7 @@ def chat():
     try:
         # Enhanced rate limiting for chat endpoint
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'chat', limit=20, window=60):
+        if not check_rate_limit(ip, 'chat', limit=100, window=60):
             return jsonify({
                 "success": False,
                 "error": "Too many chat requests. Please wait a moment."
@@ -249,7 +249,7 @@ def career_coaching():
     """Handle career coaching requests"""
     try:
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'career', limit=15, window=60):
+        if not check_rate_limit(ip, 'career', limit=75, window=60):
             return jsonify({
                 "success": False,
                 "error": "Too many career coaching requests. Please wait a moment."
@@ -320,7 +320,7 @@ def get_analytics():
     """Get comprehensive analytics report"""
     try:
         ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'analytics', limit=10, window=60):
+        if not check_rate_limit(ip, 'analytics', limit=50, window=60):
             return jsonify({"error": "Too many analytics requests"}), 429
         
         report_type = request.args.get('type', 'comprehensive')

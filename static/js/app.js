@@ -9,6 +9,7 @@ let isAuthenticated = false;
 let currentUser = null;
 let chatHistory = [];
 let currentMode = 'life'; // 'life' or 'career'
+let activeTab = 'life';
 
 // DOM Elements
 let chatMessages, chatInput, sendButton, modeToggle, goalForm, memoryOverview;
@@ -45,7 +46,9 @@ function initializeApp() {
     console.log('AI Life Coach application initialized successfully');
 
     // Auto-resize textarea
-    chatInput.addEventListener('input', autoResize.bind(this));
+    if (chatInput) {
+        chatInput.addEventListener('input', autoResize.bind(this));
+    }
 }
 
 function initializeEventListeners() {
@@ -67,8 +70,11 @@ function initializeEventListeners() {
     const modeToggle = document.getElementById('modeToggle');
     if (modeToggle) {
       modeToggle.addEventListener('change', function() {
-          switchToLifeMode();
-          updateTabUI();
+          if (this.checked) {
+              switchToCareerMode();
+          } else {
+              switchToLifeMode();
+          }
       });
     }
 
@@ -105,6 +111,27 @@ function initializeEventListeners() {
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // Initialize career coaching section
+    const careerButton = document.getElementById('careerButton');
+    const careerInput = document.getElementById('careerInput');
+    const careerPlanButton = document.getElementById('careerPlanButton');
+
+    if (careerButton) {
+        careerButton.addEventListener('click', handleCareerChat);
+    }
+
+    if (careerInput) {
+        careerInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleCareerChat();
+            }
+        });
+    }
+
+    if (careerPlanButton) {
+        careerPlanButton.addEventListener('click', createCareerPlan);
     }
 }
 
@@ -486,7 +513,7 @@ function displayAnalytics(report) {
 
 function sendQuickMessage(message) {
   document.getElementById('message-input').value = message;
-  document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+  handleChatSubmit();
 }
 
 function addGoal() {
@@ -554,6 +581,7 @@ function autoResize() {
 // Career Coaching Functions
 function switchToCareerMode() {
     currentMode = 'career';
+    activeTab = 'career';
     updateTabUI();
     document.getElementById('chatTitle').textContent = 'Career Coaching Session';
     addSystemMessage('Switched to Career Coaching mode. I\'m here to help with your professional development, career planning, and workplace challenges.');
@@ -561,6 +589,7 @@ function switchToCareerMode() {
 
 function switchToLifeMode() {
     currentMode = 'life';
+    activeTab = 'life';
     updateTabUI();
     document.getElementById('chatTitle').textContent = 'Life Coaching Session';
     addSystemMessage('Switched to Life Coaching mode. Let\'s focus on your overall wellbeing and life goals.');
@@ -593,6 +622,7 @@ function updateTabUI() {
 
     // Update quick actions based on mode
     updateQuickActions();
+    updateModeDisplay();
 }
 
 function updateQuickActions() {
@@ -668,3 +698,81 @@ window.addQuickEntry = sendQuickMessage;
 window.createCareerPlan = createCareerPlan;
 window.loadAnalytics = loadAnalyticsDashboard;
 window.exportUserData = exportUserData;
+
+    // Create career plan function
+    window.createCareerPlan = async function() {
+        try {
+            showLoading(true);
+            const timeframe = document.getElementById('planTimeframe')?.value || '6months';
+
+            const response = await fetch('/career/plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ timeframe: timeframe })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                displayCareerPlan(data);
+            } else {
+                throw new Error(data.error || 'Failed to create career plan');
+            }
+
+        } catch (error) {
+            console.error('Career plan error:', error);
+            alert('Failed to create career plan. Please try again.');
+        } finally {
+            showLoading(false);
+        }
+    };
+
+    // Display career plan function
+    function displayCareerPlan(planData) {
+        const careerResponse = document.getElementById('careerResponse');
+        if (!careerResponse) return;
+
+        const plan = planData.plan || {};
+        let planHtml = `
+            <div class="career-plan-container">
+                <h4><i class="fas fa-road"></i> ${plan.title || 'Career Development Plan'}</h4>
+                <p class="text-muted">${plan.focus || 'Strategic career development'}</p>
+        `;
+
+        if (plan.goals && plan.goals.length > 0) {
+            planHtml += '<div class="goals-section"><h5>Goals:</h5><ul>';
+            plan.goals.forEach(goal => {
+                planHtml += `<li>${goal}</li>`;
+            });
+            planHtml += '</ul></div>';
+        }
+
+        if (plan.milestones && plan.milestones.length > 0) {
+            planHtml += '<div class="milestones-section"><h5>Milestones:</h5><ul>';
+            plan.milestones.forEach(milestone => {
+                planHtml += `<li>${milestone}</li>`;
+            });
+            planHtml += '</ul></div>';
+        }
+
+        if (plan.skills && plan.skills.length > 0) {
+            planHtml += '<div class="skills-section"><h5>Skills to Develop:</h5><ul>';
+            plan.skills.forEach(skill => {
+                planHtml += `<li>${skill}</li>`;
+            });
+            planHtml += '</ul></div>';
+        }
+
+        planHtml += '</div>';
+        careerResponse.innerHTML = planHtml;
+        careerResponse.style.display = 'block';
+    }
+
+    function showLoading(isLoading) {
+        const loader = document.getElementById('loader');
+        if (loader) {
+            loader.style.display = isLoading ? 'block' : 'none';
+        }
+    }
