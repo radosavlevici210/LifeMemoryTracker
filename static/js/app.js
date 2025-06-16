@@ -63,13 +63,8 @@ class LifeCoachApp {
             refreshAnalytics.addEventListener('click', () => this.loadAnalytics());
         }
 
-        // Export and clear
-        const exportBtn = document.getElementById('exportBtn');
+        // Clear data only
         const clearBtn = document.getElementById('clearBtn');
-        
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => this.exportData());
-        }
         
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.clearData());
@@ -293,28 +288,7 @@ class LifeCoachApp {
         }
     }
 
-    async exportData() {
-        try {
-            const response = await fetch('/export');
-            const data = await response.json();
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ai_life_coach_export_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            URL.revokeObjectURL(url);
-            this.showNotification('Data exported successfully!', 'success');
-        } catch (error) {
-            console.error('Export error:', error);
-            this.showNotification('Export failed. Please try again.', 'error');
-        }
-    }
+    
 
     clearData() {
         if (confirm('Are you sure you want to clear all local data? This cannot be undone.')) {
@@ -356,11 +330,7 @@ function loadMemoryOverview() {
     }
 }
 
-function exportUserData() {
-    if (window.lifeCoachApp) {
-        window.lifeCoachApp.exportData();
-    }
-}
+
 
 function createCareerPlan() {
     if (window.lifeCoachApp) {

@@ -124,25 +124,7 @@ def get_analytics():
         logging.error(f"Analytics error: {str(e)}")
         return jsonify({"error": "Failed to generate analytics"}), 500
 
-@app.route("/export", methods=["GET"])
-def export_data():
-    """Export user data"""
-    try:
-        memory_data = life_coach.memory_manager.load_memory()
 
-        export_data = {
-            "life_events": memory_data.get("life_events", []),
-            "goals": memory_data.get("goals", []),
-            "patterns": memory_data.get("patterns", {}),
-            "export_timestamp": time.time(),
-            "version": "1.0"
-        }
-
-        return jsonify(export_data)
-
-    except Exception as e:
-        logging.error(f"Export error: {str(e)}")
-        return jsonify({"error": "Failed to export data"}), 500
 
 @app.route("/health", methods=["GET"])
 def health_check():
