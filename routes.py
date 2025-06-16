@@ -14,26 +14,8 @@ life_coach = LifeCoach()
 career_coach = CareerCoach()
 analytics = LifeAnalytics()
 
-# Request tracking for additional rate limiting
-request_tracker = {}
-
-def check_rate_limit(ip, endpoint, limit=50, window=60):
-    """Enhanced rate limiting per endpoint for production"""
-    current_time = time.time()
-    key = f"{ip}:{endpoint}"
-    
-    if key not in request_tracker:
-        request_tracker[key] = []
-    
-    # Clean old requests
-    request_tracker[key] = [req_time for req_time in request_tracker[key] 
-                           if current_time - req_time < window]
-    
-    if len(request_tracker[key]) >= limit:
-        return False
-    
-    request_tracker[key].append(current_time)
-    return True
+# Simple request tracking
+request_count = 0
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -131,25 +113,17 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route("/")
-@login_required
 def index():
     """Main page route"""
-    current_user = get_current_user()
-    return render_template("index.html", current_user=current_user)
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
-@login_required
 def chat():
     """Handle chat messages"""
+    global request_count
+    request_count += 1
+    
     try:
-        # Enhanced rate limiting for chat endpoint
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'chat', limit=100, window=60):
-            return jsonify({
-                "success": False,
-                "error": "Too many chat requests. Please wait a moment."
-            }), 429
-        
         data = request.get_json()
         if not data or "message" not in data:
             return jsonify({
@@ -164,58 +138,32 @@ def chat():
                 "error": "Empty message"
             }), 400
         
-        # Input validation and sanitization
-        if len(user_message) > 2000:
-            return jsonify({
-                "success": False,
-                "error": "Message too long. Please keep it under 2000 characters."
-            }), 400
-        
-        # Log chat interaction (without sensitive data)
-        current_user = get_current_user()
-        logging.info(f"Chat request from {current_user.get('username', 'unknown')} - Message length: {len(user_message)}")
-        
         # Generate AI response
         response = life_coach.generate_response(user_message)
-        
-        # Track session activity
-        session['last_activity'] = time.time()
-        session.permanent = True
-        
         return jsonify(response)
         
     except Exception as e:
-        logging.error(f"Chat endpoint error: {str(e)}")
+        logging.error(f"Chat error: {str(e)}")
         return jsonify({
             "success": False,
-            "error": "Server error occurred",
-            "response": "I'm experiencing technical difficulties. Please try again."
+            "error": "Server error",
+            "response": "Sorry, I'm having trouble right now. Please try again."
         }), 500
 
 @app.route("/memory", methods=["GET"])
-@login_required
 def get_memory():
     """Get memory summary"""
     try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'memory', limit=30, window=60):
-            return jsonify({"error": "Too many requests"}), 429
-        
         summary = life_coach.get_memory_summary()
         return jsonify(summary)
     except Exception as e:
-        logging.error(f"Memory endpoint error: {str(e)}")
-        return jsonify({"error": "Failed to load memory data"}), 500
+        logging.error(f"Memory error: {str(e)}")
+        return jsonify({"error": "Failed to load memory"}), 500
 
 @app.route("/goals", methods=["POST"])
-@login_required
 def add_goal():
     """Add a new goal"""
     try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'goals', limit=10, window=60):
-            return jsonify({"success": False, "error": "Too many requests"}), 429
-        
         data = request.get_json()
         if not data or "goal" not in data:
             return jsonify({"success": False, "error": "No goal provided"}), 400
@@ -226,13 +174,7 @@ def add_goal():
         if not goal_text:
             return jsonify({"success": False, "error": "Empty goal"}), 400
         
-        if len(goal_text) > 500:
-            return jsonify({"success": False, "error": "Goal too long. Please keep it under 500 characters."}), 400
-        
         success = life_coach.add_goal(goal_text, target_date)
-        
-        current_user = get_current_user()
-        logging.info(f"Goal added by {current_user.get('username', 'unknown')} - Success: {success}")
         
         return jsonify({
             "success": success,
@@ -240,8 +182,8 @@ def add_goal():
         })
         
     except Exception as e:
-        logging.error(f"Goals endpoint error: {str(e)}")
-        return jsonify({"success": False, "error": "Server error occurred"}), 500
+        logging.error(f"Goals error: {str(e)}")
+        return jsonify({"success": False, "error": "Server error"}), 500
 
 @app.route("/career", methods=["POST"])
 @login_required
@@ -344,17 +286,11 @@ def get_analytics():
         return jsonify({"error": "Failed to generate analytics report"}), 500
 
 @app.route("/export", methods=["GET"])
-@login_required
 def export_data():
     """Export user data"""
     try:
-        ip = request.environ.get('REMOTE_ADDR', 'unknown')
-        if not check_rate_limit(ip, 'export', limit=5, window=300):  # 5 exports per 5 minutes
-            return jsonify({"error": "Too many export requests"}), 429
-        
         memory_data = life_coach.memory_manager.load_memory()
         
-        # Remove any sensitive internal data
         export_data = {
             "life_events": memory_data.get("life_events", []),
             "goals": memory_data.get("goals", []),
@@ -363,13 +299,10 @@ def export_data():
             "version": "1.0"
         }
         
-        current_user = get_current_user()
-        logging.info(f"Data export requested by {current_user.get('username', 'unknown')}")
-        
         return jsonify(export_data)
         
     except Exception as e:
-        logging.error(f"Export endpoint error: {str(e)}")
+        logging.error(f"Export error: {str(e)}")
         return jsonify({"error": "Failed to export data"}), 500
 
 @app.route("/health", methods=["GET"])

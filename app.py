@@ -41,27 +41,12 @@ def security_headers(response):
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response
 
-# Enhanced rate limiting middleware for production
+# Simple logging middleware
 @app.before_request
-def rate_limit():
-    # More flexible rate limiting for production use
-    ip = request.environ.get('REMOTE_ADDR')
-    if not hasattr(g, 'rate_limits'):
-        g.rate_limits = {}
-    
-    # Allow 500 requests per minute per IP for production
-    import time
-    current_time = time.time()
-    if ip in g.rate_limits:
-        if current_time - g.rate_limits[ip]['last_reset'] > 60:
-            g.rate_limits[ip] = {'count': 0, 'last_reset': current_time}
-        g.rate_limits[ip]['count'] += 1
-        # Increased limit for production usage
-        if g.rate_limits[ip]['count'] > 500:
-            from flask import abort
-            abort(429)  # Too Many Requests
-    else:
-        g.rate_limits[ip] = {'count': 1, 'last_reset': current_time}
+def log_request():
+    # Basic request logging
+    if app.debug:
+        print(f"Request: {request.method} {request.path}")
 
 # Import routes after app configuration
 import routes
